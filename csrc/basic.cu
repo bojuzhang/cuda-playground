@@ -39,7 +39,8 @@ bool compare(float *a, float *b, const int N) {
 
 __global__ void vectorAddGPU(float *a, float *b, float *c, const int N) {
   // Implement your vector add kernel here
-  
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  c[i] = a[i] + b[i];
 }
 
 int main() {
@@ -58,14 +59,23 @@ int main() {
 
   // ************** START GPU MEMORY ALLOCATION **************
   // Implement your code here
+  float *da, *db, *dc;
+  cudaMalloc(&da, MAXN * sizeof(float));
+  cudaMalloc(&db, MAXN * sizeof(float));
+  cudaMalloc(&dc, MAXN * sizeof(float));
+
+  cudaMemcpy(da, a, MAXN * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(db, b, MAXN * sizeof(float), cudaMemcpyHostToDevice);
   
   // ************** START GPU COMPUTATION **************
   start = std::chrono::high_resolution_clock::now();
   // Implement your code here
+  vectorAddGPU<<<MAXN / 512, 512>>>(da, db, dc, MAXN);
   end = std::chrono::high_resolution_clock::now();
 
   float *result = new float[MAXN];
   // Copy the result from GPU to CPU
+  cudaMemcpy(result, dc, MAXN * sizeof(float), cudaMemcpyDeviceToHost);
   if (compare(c, result, MAXN)) {
     std::chrono::duration<double> new_elapsed = end - start;
     printf("GPU time: %.3fs\n", new_elapsed.count());
